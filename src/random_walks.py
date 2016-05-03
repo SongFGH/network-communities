@@ -5,7 +5,34 @@ from py2neo import Graph, Node, Relationship
 from py2neo.packages.httpstream import http
 
 http.socket_timeout = 9999
+
+def nodesAndEdges():
+	graph = Graph()
+	# Aggregate by year query
+	# query= """
+	#	MATCH (a:Airport)-[d:DAILY_FLIGHTS]->(b:Airport)
+	#	WITH a, b, d.year AS year, sum(toInt(d.frequency)) AS yearly_freq
+	#	CREATE (a)-[m:YEARLY_FLIGHTS { year : year, frequency : yearly_freq }]->(b)
+	#	"""
 	
+	year = "2015"
+	# Get all routes for that year (edges)
+	query = """
+		MATCH (a:Airport)-[n:YEARLY_FLIGHTS]-(b:Airport)
+		WHERE n.year = '%s'
+		RETURN a.code AS origin, n, b.code AS dest
+		""" % year
+	edges = graph.cypher.execute(query)
+
+	# Get all active airports for that year (AIRPORTS) | TODO: is this the best way?
+	query = """
+		MATCH (a:Airport)-[n:YEARLY_FLIGHTS]-(b:Airport)
+		WHERE n.year = '%s'
+		RETURN a.code as id, count(*)
+		""" % year
+ 	nodes = graph.cypher.execute(query)
+
+	return nodes, edges
 
 def distance(vector1, vector2):
 	diff = numpy.dot( numpy.linalg.matrix_power(degrees, -1/2),  vector1) - numpy.dot( numpy.linalg.matrix_power(degrees, -1/2),  vector2)
@@ -23,9 +50,7 @@ def communityDelta(delta_matrix, communities, c1, c2, c):
 	- ( len(communities[c]) * delta_matrix[c1, c2] ) 
 	) / ( len(communities[c1]) + len(communities[c2]) + len(communities[c]) )
 	
-
 def mergeCommunities(k, j, communities, neighbours, delta_matrix):
-
 	# Create new community merging previous ones
 	communities.append(communities[k] + communities[j])
 
@@ -80,21 +105,7 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 
 	return (communities, neighbours, delta_matrix)
 
-graph = Graph()
-
-# Aggregate by year query
-# query= """
-#	MATCH (a:Airport)-[d:DAILY_FLIGHTS]->(b:Airport)
-#	WITH a, b, d.year AS year, sum(toInt(d.frequency)) AS yearly_freq
-#	CREATE (a)-[m:YEARLY_FLIGHTS { year : year, frequency : yearly_freq }]->(b)
-#	"""
-
-# GET ALL NODES (AIRPORTS)
-query = """
-	MATCH (a:Airport)
-	RETURN a.code as id
-	"""
-nodes = graph.cypher.execute(query)
+nodes, edges = nodesAndEdges()
 length = len(nodes)
 
 # A: Initiate as identity matrix
@@ -115,15 +126,6 @@ for airport in nodes:
 	
 	communities.append([i])
 	i = i + 1
-
-# Get all routes for that year (edges)
-year = "2015"
-query = """
-	MATCH (a:Airport)-[n:YEARLY_FLIGHTS]-(b:Airport)
-	WHERE n.year = '%s'
-	RETURN a.code AS origin, n, b.code AS dest
-	""" % year
-edges = graph.cypher.execute(query)
 
 # For each route:
 for route in edges:
@@ -193,4 +195,4 @@ while len(neighbours) > 1:
 				min_value = delta_matrix[i][j]
 				min_index = (i, j)
 
-print communities
+# print communities
