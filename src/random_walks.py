@@ -17,6 +17,7 @@ def nodesAndEdges():
 	
 	year = "2015"
 	# Get all routes for that year (edges)
+	# Ignoring the direction retrieves a route twice
 	query = """
 		MATCH (a:Airport)-[n:YEARLY_FLIGHTS]-(b:Airport)
 		WHERE n.year = '%s'
@@ -134,23 +135,8 @@ for route in edges:
 
 	# Populate A with connections between airports
 	A[origin_index, dest_index] = 1 # TO-DO: change 1 with edge weight (frequency) ?
-	A[dest_index, origin_index] = 1 # TO-DO: change 1 with edge weight (frequency) ?
-
 	# Populate neighbours tree
 	neighbours[origin_index].append(dest_index)
-	neighbours[dest_index].append(origin_index)
-
-# Uniqify neighbours list
-to_delete = []
-for key, neighbour_list in neighbours.iteritems():
-	# Delete empty collections : DELETE AIRPORTS WITH NO ROUTE | TODO: is it right?
-	if len(neighbour_list) == 0:
-		to_delete.append(key)
-
-	neighbours[key] = list(set(neighbour_list))
-
-# for key in to_delete:
-# 	del neighbours[key]
 
 #numpy.savetxt("A.csv", A, fmt="%i", delimiter=",")
 
