@@ -61,7 +61,7 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 
 	print "(%d, %d) -> %d" % (k, j, i)
 
-	# Update neighbours removing previous communities
+	# Update neighbours of the new comunity removing previous communities that have been merged
 	try:
 		neighbours[i].remove(k)
 	except ValueError:
@@ -74,7 +74,6 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 	
 	# For each neighbour, remove previous communities and add new one
 	for n in neighbours[i]:
-
 		try:
 			neighbours[n].remove(k)
 		except ValueError:
@@ -87,24 +86,24 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 		
 		neighbours[n].append(i)
 
-	# Delete old communities
+	# Delete old communities' neighbours
 	del neighbours[k]
 	del neighbours[j]
 
-	print neighbours
-
 	# Update delta matrix
-	tmp_dist = delta_matrix
+	tmp_delta = delta_matrix
 	delta_matrix = numpy.empty((i+1, i+1))
-	delta_matrix[:-1, :-1] = tmp_dist
+	delta_matrix[:-1, :-1] = tmp_delta
 
-	# UPDATE ONLY ADJACENT COMMUNITIES DISTANCES
+	# Update only adjacent communities' delta sigma
 	for n in neighbours[i]:
-		comm_dist = communityDelta(delta_matrix, communities, c1=k, c2=j, c=n)
-		delta_matrix[n][i] = comm_dist
-		delta_matrix[i][n] = comm_dist
+		comm_delta = communityDelta(delta_matrix, communities, c1=k, c2=j, c=n)
+		delta_matrix[n][i] = comm_delta
+		delta_matrix[i][n] = comm_delta # TODO: check if we can remove this, I think is not needed
 
 	return (communities, neighbours, delta_matrix)
+
+
 
 nodes, edges = nodesAndEdges()
 length = len(nodes)
@@ -156,23 +155,16 @@ t = 3
 Pt = P * t
 #numpy.savetxt("Pt.csv", Pt, fmt="%f", delimiter=",")
 
-# Initiate delta matrix + get minimum
-delta_matrix = numpy.zeros([length, length])
-min_index = (None, None)
-min_value = None
-for i, l in neighbours.iteritems():
-	for j in l:
+# Initiate delta matrix
+delta_matrix = numpy.empty([length, length])
+for i, neighbours_list in neighbours.iteritems():
+	for j in neighbours_list:
 		delta_matrix[i][j] = delta(Pt[i], Pt[j], n=length)
-		if min_value == None or delta_matrix[i][j] < min_value:
-			min_value = delta_matrix[i][j]
-			min_index = (i, j)
 
 #numpy.savetxt("dist.csv", dist, fmt="%f", delimiter=",")
 
-
+# Start merging communities
 while len(neighbours) > 1:
-	(communities, neighbours, delta_matrix) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix)
-
 	min_index = (None, None)
 	min_value = None
 	for i, l in neighbours.iteritems():
@@ -180,5 +172,7 @@ while len(neighbours) > 1:
 			if min_value == None or delta_matrix[i][j] < min_value:
 				min_value = delta_matrix[i][j]
 				min_index = (i, j)
+
+	(communities, neighbours, delta_matrix) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix)
 
 # print communities
