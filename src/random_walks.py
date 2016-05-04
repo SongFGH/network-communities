@@ -42,7 +42,7 @@ def distance(vector1, vector2):
 
 def delta(vector1, vector2, n):
 	diff = distance(vector1, vector2)
-	return (diff ** 2) / 2 #/ n     # distance between communities
+	return ( 1/n ) * ( 1/2 ) * ( diff ** 2 )
 
 def communityDelta(delta_matrix, communities, c1, c2, c):
 	return ( 
