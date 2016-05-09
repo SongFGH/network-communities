@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram, is_valid_linkage
 import numpy
 from py2neo import Graph, Node, Relationship
 from py2neo.packages.httpstream import http
@@ -51,7 +53,7 @@ def communityDelta(delta_matrix, communities, c1, c2, c):
 	- ( len(communities[c]) * delta_matrix[c1, c2] ) 
 	) / ( len(communities[c1]) + len(communities[c2]) + len(communities[c]) )
 	
-def mergeCommunities(k, j, communities, neighbours, delta_matrix):
+def mergeCommunities(k, j, communities, neighbours, delta_matrix, Z):
 	# Create new community merging previous ones
 	communities.append(communities[k] + communities[j])
 
@@ -59,7 +61,7 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 	i = len(communities) - 1
 	neighbours[i] = list(set(neighbours[k] + neighbours[j]))
 
-	print "(%d, %d) -> %d" % (k, j, i)
+	# print "(%d, %d) -> %d" % (k, j, i)
 
 	# Update neighbours of the new comunity removing previous communities that have been merged
 	try:
@@ -90,6 +92,9 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 	del neighbours[k]
 	del neighbours[j]
 
+	#Add step to linkage matrix
+	Z.append( numpy.array([ k, j, delta_matrix[k,j], len(communities[i])], numpy.float64) )
+
 	# Update delta matrix
 	tmp_delta = delta_matrix
 	delta_matrix = numpy.empty((i+1, i+1))
@@ -101,7 +106,7 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix):
 		delta_matrix[n][i] = comm_delta
 		delta_matrix[i][n] = comm_delta # TODO: check if we can remove this, I think is not needed
 
-	return (communities, neighbours, delta_matrix)
+	return (communities, neighbours, delta_matrix, Z)
 
 
 
@@ -163,6 +168,9 @@ for i, neighbours_list in neighbours.iteritems():
 
 #numpy.savetxt("dist.csv", dist, fmt="%f", delimiter=",")
 
+#List to keep track of the linkage matrix used for building the dendogram
+Z = []
+
 # Start merging communities
 while len(neighbours) > 1:
 	min_index = (None, None)
@@ -173,6 +181,7 @@ while len(neighbours) > 1:
 				min_value = delta_matrix[i][j]
 				min_index = (i, j)
 
-	(communities, neighbours, delta_matrix) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix)
+	(communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
 
-# print communities
+print numpy.asarray(Z)
+print is_valid_linkage(numpy.asarray(Z))
