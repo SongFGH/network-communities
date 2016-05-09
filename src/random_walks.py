@@ -44,7 +44,7 @@ def distance(vector1, vector2):
 
 def delta(vector1, vector2, n):
 	diff = distance(vector1, vector2)
-	return ( 1/n ) * ( 1/2 ) * ( diff ** 2 )
+	return ( 1.0/n ) * ( 1.0/2.0 ) * ( diff ** 2 )
 
 def communityDelta(delta_matrix, communities, c1, c2, c):
 	return ( 
@@ -158,15 +158,14 @@ P = numpy.dot( numpy.linalg.matrix_power(degrees, -1) , A)
 
 t = 3
 Pt = P * t
-#numpy.savetxt("Pt.csv", Pt, fmt="%f", delimiter=",")
+# numpy.savetxt("Pt.csv", Pt, fmt="%f", delimiter=",")
 
 # Initiate delta matrix
 delta_matrix = numpy.empty([length, length])
 for i, neighbours_list in neighbours.iteritems():
 	for j in neighbours_list:
 		delta_matrix[i][j] = delta(Pt[i], Pt[j], n=length)
-
-#numpy.savetxt("dist.csv", dist, fmt="%f", delimiter=",")
+# numpy.savetxt("delta.csv", delta_matrix, fmt="%f", delimiter=",")
 
 #List to keep track of the linkage matrix used for building the dendogram
 Z = []
@@ -183,5 +182,19 @@ while len(neighbours) > 1:
 
 	(communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
 
-print numpy.asarray(Z)
-print is_valid_linkage(numpy.asarray(Z))
+# Setup Dendogram
+# plt.figure(figsize=(25, 100))
+plt.title('Random Walks Dendrogram')
+plt.xlabel('Communities')
+plt.ylabel('delta Sigma')
+dendrogram(
+    numpy.asarray(Z),
+    # p=10,
+    # truncate_mode='lastp',
+    # show_leaf_counts=False,
+    leaf_rotation=90.,  # rotates the x axis labels
+    leaf_font_size=6.,  # font size for the x axis labels
+    # show_contracted=True,
+    # orientation='bottom'
+)
+plt.show()
