@@ -6,8 +6,7 @@ import numpy
 from graph_db import nodesAndEdges
 
 def distance(vector1, vector2):
-	diff = numpy.dot( numpy.linalg.matrix_power(degrees, -1/2),  vector1) - numpy.dot( numpy.linalg.matrix_power(degrees, -1/2),  vector2)
-
+	diff = numpy.dot(degrees_neg_1_2,  vector1) - numpy.dot(degrees_neg_1_2,  vector2)
 	return numpy.linalg.norm(diff) # distance between nodes
 
 def delta(vector1, vector2, n):
@@ -29,7 +28,7 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix, Z):
 	i = len(communities) - 1
 	neighbours[i] = list(set(neighbours[k] + neighbours[j]))
 
-	# print "(%d, %d) -> %d" % (k, j, i)
+	# print "(%d, %d) -> %d [%f]" % (k, j, i, delta_matrix[k,j])
 
 	# Update neighbours of the new comunity removing previous communities that have been merged
 	try:
@@ -77,7 +76,6 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix, Z):
 	return (communities, neighbours, delta_matrix, Z)
 
 
-
 nodes, edges = nodesAndEdges()
 length = len(nodes)
 
@@ -110,8 +108,6 @@ for route in edges:
 	# Populate neighbours tree
 	neighbours[origin_index].append(dest_index)
 
-#numpy.savetxt("A.csv", A, fmt="%i", delimiter=",")
-
 # Calculate degree matrix
 degrees = numpy.zeros([length, length])
 for code, i in airports.iteritems():
@@ -128,6 +124,10 @@ t = 3
 Pt = P * t
 # numpy.savetxt("Pt.csv", Pt, fmt="%f", delimiter=",")
 
+# Elevate the diagonal degrees matrix to the negative 1/2 power
+degrees_neg_1_2 = numpy.zeros(degrees.shape)
+numpy.fill_diagonal( degrees_neg_1_2, 1/(degrees.diagonal()**0.5) )
+
 # Initiate delta matrix
 delta_matrix = numpy.empty([length, length])
 for i, neighbours_list in neighbours.iteritems():
@@ -135,7 +135,7 @@ for i, neighbours_list in neighbours.iteritems():
 		delta_matrix[i][j] = delta(Pt[i], Pt[j], n=length)
 # numpy.savetxt("delta.csv", delta_matrix, fmt="%f", delimiter=",")
 
-#List to keep track of the linkage matrix used for building the dendogram
+# List to keep track of the linkage matrix used for building the dendogram
 Z = []
 
 # Start merging communities
