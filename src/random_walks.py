@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, is_valid_linkage
 import numpy
 from graph_db import nodesAndEdges
+import pdb
 
 
 def distance(vector1, vector2):
@@ -80,9 +81,35 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix, Z):
   return (communities, neighbours, delta_matrix, Z)
 
 
+def modularity(communities, neighbours, original_neighbours, n_edges):
+  m = []
+  # The 'neighbours' dictionary keeps track of the current communities and their neighbours
+  # while the 'communities' array keeps every community even after merging
+  for community_id, neighbours_list in neighbours.iteritems(): 
+    e_edges = 0 # internal edges of the community
+    a_edges = 0 # any edge in the community
+    c = communities[community_id]
+    for v in c: # for every vertix in the community
+      i_neighbours = filter(lambda x: x in c, original_neighbours[v]) #get only the neighbours inside the community
+      e_edges = e_edges + len(i_neighbours)
+      a_edges = a_edges + len(original_neighbours[v])
+
+    e_edges = e_edges / 2 # We get duplicated inter edges because vertices inside a community are neighbours
+    a_edges = a_edges - e_edges # Remove the duplicated edges also from the general edge count
+
+    e_edges_fraction = e_edges / n_edges
+    a_edges_fraction = a_edges / n_edges
+
+    m.append(e_edges_fraction - pow(a_edges_fraction, 2))
+
+  # print "modularity for partition"
+  # print list(neighbours)
+  # print sum(m)
+  return sum(m)
+  
+
 nodes, edges = nodesAndEdges()
 length = len(nodes)
-
 
 # A: Initiate as identity matrix
 A = numpy.identity(length)
@@ -112,6 +139,17 @@ for route in edges:
   A[origin_index, dest_index] = 1 # TO-DO: change 1 with edge weight (frequency) ?
   # Populate neighbours tree
   neighbours[origin_index].append(dest_index)
+
+# Get number of edges
+i = 0
+n_edges = 0
+while i < (length-1):
+  # Sum only the upper triangule of the A matrix
+  # TODO: can we just measure the size of the edges return by the cypher query? how can we make sure we are not counting an edge twice? 
+  n_edges = n_edges + sum(A[i+1][i+1:length])
+  i = i + 1
+
+n_edges = float(n_edges)
 
 # Calculate degree matrix
 degrees = numpy.zeros([length, length])
@@ -143,6 +181,17 @@ for i, neighbours_list in neighbours.iteritems():
 # List to keep track of the linkage matrix used for building the dendogram
 Z = []
 
+# Keep original neighbours to use in the Modularity calculation
+original_neighbours = dict(neighbours)
+# Q will keep the modularity value after each partition is made
+Q = []
+# community_at_step will keep the structure of the communities through every merging step
+communities_at_step = []
+
+#Get Starting Communities and Modularity
+communities_at_step.append( list(neighbours.keys()) )
+Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
+
 # Start merging communities
 while len(neighbours) > 1:
   min_index = (None, None)
@@ -154,7 +203,11 @@ while len(neighbours) > 1:
         min_index = (i, j)
 
   (communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
+  communities_at_step.append( list(neighbours.keys()) )
+  Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
 
+print Q
+exit()
 # Setup Dendogram
 # plt.figure(figsize=(25, 100))
 plt.title('Random Walks Dendrogram')
