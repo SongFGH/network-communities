@@ -115,10 +115,6 @@ def modularity(communities, neighbours, original_neighbours, n_edges):
 nodes, edges = nodesAndEdges()
 length = len(nodes)
 
-# A: Initiate as identity matrix
-A = numpy.identity(length)
-
-i = 0
 # Airports dictionary CODE: ID
 airports = {}
 # Airports neighbours dictionary
@@ -126,6 +122,10 @@ neighbours = {}
 # Cluster communities
 communities = []
 
+# A will keep the track of the weight of the edge between vertices
+A = numpy.zeros((length,length))
+
+i = 0
 # For each node, initiate dictionary, neighbours and communities
 for airport in nodes:
   airports[airport.id] = i
@@ -140,26 +140,30 @@ for route in edges:
   dest_index = airports[route.dest]
 
   # Populate A with connections between airports
-  A[origin_index, dest_index] = 1 # TO-DO: change 1 with edge weight (frequency) ?
+  # A[origin_index, dest_index] = 1
+  A[origin_index, dest_index] = A[origin_index, dest_index] + route.n.properties['frequency']
   # Populate neighbours tree
   neighbours[origin_index].append(dest_index)
 
-# Get number of edges
+# Calculate degree matrix
+degrees = numpy.zeros((length,length))
+for code, i in airports.iteritems():
+  degree = sum( map(lambda x: 1 if x > 0.0 else 0, A[i]) )
+  degrees[i][i] = degree
+
+# Get total weight of all edges
 i = 0
-n_edges = 0
+total_edges_weight = 0.0
 while i < (length-1):
+  # Add the weight of the self-linking edge of each vertex
+  A[i][i] = sum(A[i]) / float(degrees[i][i])
+  # Add this self-linking edge to the degree of the vertex
+  degrees[i][i] = degrees[i][i] + 1
+
   # Sum only the upper triangule of the A matrix and the diagonal
-  # TODO: can we just measure the size of the edges returned by the cypher query? how can we make sure we are not counting an edge twice? 
-  n_edges = n_edges + sum(A[i][i:length])
+  total_edges_weight = total_edges_weight + sum(A[i][i:length])
   i = i + 1
 
-n_edges = float(n_edges)
-
-# Calculate degree matrix
-degrees = numpy.zeros([length, length])
-for code, i in airports.iteritems():
-  degree = numpy.sum(A[i])
-  degrees[i][i] = degree
 #numpy.savetxt("degrees.csv", degrees, fmt="%i", delimiter=",")
 
 # Calculate P 
@@ -167,7 +171,7 @@ P = numpy.dot( numpy.linalg.matrix_power(degrees, -1) , A)
 
 #numpy.savetxt("P.csv", P, fmt="%f", delimiter=",")
 
-t = 3
+t = 5
 Pt = P * t
 # numpy.savetxt("Pt.csv", Pt, fmt="%f", delimiter=",")
 
@@ -194,7 +198,7 @@ communities_at_step = []
 
 #Get Starting Communities and Modularity
 communities_at_step.append( list(neighbours.keys()) )
-Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
+# Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
 
 # Start merging communities
 while len(neighbours) > 1:
@@ -208,7 +212,7 @@ while len(neighbours) > 1:
 
   (communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
   communities_at_step.append( list(neighbours.keys()) )
-  Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
+  # Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
 
 print Q
 exit()
