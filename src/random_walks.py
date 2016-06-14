@@ -89,13 +89,17 @@ def modularity(communities, neighbours, original_neighbours, n_edges):
     e_edges = 0 # internal edges of the community
     a_edges = 0 # any edge in the community
     c = communities[community_id]
-    for v in c: # for every vertix in the community
+    for v in c: # for every vertex in the community
       i_neighbours = filter(lambda x: x in c, original_neighbours[v]) #get only the neighbours inside the community
       e_edges = e_edges + len(i_neighbours)
       a_edges = a_edges + len(original_neighbours[v])
 
     e_edges = e_edges / 2 # We get duplicated inter edges because vertices inside a community are neighbours
     a_edges = a_edges - e_edges # Remove the duplicated edges also from the general edge count
+
+    # Add to the number of edges  the self linking loops to every vertex in the community
+    e_edges = e_edges + len(c)
+    a_edges = a_edges + len(c)
 
     e_edges_fraction = e_edges / n_edges
     a_edges_fraction = a_edges / n_edges
@@ -104,7 +108,7 @@ def modularity(communities, neighbours, original_neighbours, n_edges):
 
   # print "modularity for partition"
   # print list(neighbours)
-  # print sum(m)
+  print sum(m)
   return sum(m)
   
 
@@ -144,9 +148,9 @@ for route in edges:
 i = 0
 n_edges = 0
 while i < (length-1):
-  # Sum only the upper triangule of the A matrix
-  # TODO: can we just measure the size of the edges return by the cypher query? how can we make sure we are not counting an edge twice? 
-  n_edges = n_edges + sum(A[i+1][i+1:length])
+  # Sum only the upper triangule of the A matrix and the diagonal
+  # TODO: can we just measure the size of the edges returned by the cypher query? how can we make sure we are not counting an edge twice? 
+  n_edges = n_edges + sum(A[i][i:length])
   i = i + 1
 
 n_edges = float(n_edges)
