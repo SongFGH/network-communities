@@ -81,31 +81,29 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix, Z):
   return (communities, neighbours, delta_matrix, Z)
 
 
-def modularity(communities, neighbours, original_neighbours, n_edges):
+def modularity(A, communities, neighbours, original_neighbours, total_edges_weight):
   m = []
   # The 'neighbours' dictionary keeps track of the current communities and their neighbours
   # while the 'communities' array keeps every community even after merging
   for community_id, neighbours_list in neighbours.iteritems(): 
-    e_edges = 0 # internal edges of the community
-    a_edges = 0 # any edge in the community
+    e_edges = 0.0 # weight of internal edges of the community
+    a_edges = 0.0 # any edge in the community
     c = communities[community_id]
     for v in c: # for every vertex in the community
-      i_neighbours = filter(lambda x: x in c, original_neighbours[v]) #get only the neighbours inside the community
-      e_edges = e_edges + len(i_neighbours)
-      a_edges = a_edges + len(original_neighbours[v])
+      for n in original_neighbours[v]: #get the weight of the edges between it and its neighbours
+        if n in c:
+          e_edges = e_edges + A[v][n] #sum the weight of inner edges
+        else:
+          a_edges = a_edges + A[v][n]# /2.0 #an edge between two communities is a half-edge for each community - BUT WHY?
 
-    e_edges = e_edges / 2 # We get duplicated inter edges because vertices inside a community are neighbours
-    a_edges = a_edges - e_edges # Remove the duplicated edges also from the general edge count
+      # We first divide between 2 because internal edges are counted twice
+      # Then we add the weight of the self-linking edge
+      e_edges = ( e_edges / 2.0 ) + A[v][v] 
+      a_edges = a_edges + e_edges
 
-    # Add to the number of edges  the self linking loops to every vertex in the community
-    e_edges = e_edges + len(c)
-    a_edges = a_edges + len(c)
-
-    e_edges_fraction = e_edges / n_edges
-    a_edges_fraction = a_edges / n_edges
-
-    m.append(e_edges_fraction - pow(a_edges_fraction, 2))
-
+    e_edges_fraction = e_edges / total_edges_weight
+    a_edges_fraction = a_edges / total_edges_weight
+    m.append(e_edges_fraction - pow(a_edges_fraction,2))
   # print "modularity for partition"
   # print list(neighbours)
   print sum(m)
@@ -119,6 +117,8 @@ length = len(nodes)
 airports = {}
 # Airports neighbours dictionary
 neighbours = {}
+# Airports neighbours dictionary
+original_neighbours = {}
 # Cluster communities
 communities = []
 
@@ -130,6 +130,7 @@ i = 0
 for airport in nodes:
   airports[airport.id] = i
   neighbours[i] = []
+  original_neighbours[i] = []
 
   communities.append([i])
   i = i + 1
@@ -144,6 +145,7 @@ for route in edges:
   A[origin_index, dest_index] = A[origin_index, dest_index] + route.n.properties['frequency']
   # Populate neighbours tree
   neighbours[origin_index].append(dest_index)
+  original_neighbours[origin_index].append(dest_index)
 
 # Calculate degree matrix
 degrees = numpy.zeros((length,length))
@@ -189,16 +191,14 @@ for i, neighbours_list in neighbours.iteritems():
 # List to keep track of the linkage matrix used for building the dendogram
 Z = []
 
-# Keep original neighbours to use in the Modularity calculation
-original_neighbours = dict(neighbours)
 # Q will keep the modularity value after each partition is made
 Q = []
 # community_at_step will keep the structure of the communities through every merging step
 communities_at_step = []
 
 #Get Starting Communities and Modularity
+Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
 communities_at_step.append( list(neighbours.keys()) )
-# Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
 
 # Start merging communities
 while len(neighbours) > 1:
@@ -212,9 +212,9 @@ while len(neighbours) > 1:
 
   (communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
   communities_at_step.append( list(neighbours.keys()) )
-  # Q.append(modularity(communities, neighbours, original_neighbours, n_edges))
+  Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
 
-print Q
+# print Q
 exit()
 # Setup Dendogram
 # plt.figure(figsize=(25, 100))
