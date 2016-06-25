@@ -90,24 +90,20 @@ def modularity(A, communities, neighbours, original_neighbours, total_edges_weig
     a_edges = 0.0 # any edge in the community
     c = communities[community_id]
     for v in c: # for every vertex in the community
-      for n in original_neighbours[v]: #get the weight of the edges between it and its neighbours
-        if n in c:
-          e_edges = e_edges + A[v][n] #sum the weight of inner edges
-        else:
-          a_edges = a_edges + A[v][n]# /2.0 #an edge between two communities is a half-edge for each community - BUT WHY?
+      for n in original_neighbours[v]: 
+        if n in c: # get the weight of the edges between it and its neighbours 
+          e_edges = e_edges + A[v][n]
+        a_edges = a_edges + A[v][n]
+    mod = float(e_edges) - ( float(a_edges*a_edges) / float(2*total_edges_weight) )
+    m.append( mod )
 
-      # We first divide between 2 because internal edges are counted twice
-      # Then we add the weight of the self-linking edge
-      e_edges = ( e_edges / 2.0 ) + A[v][v] 
-      a_edges = a_edges + e_edges
+  Q = sum(m) / float(2 * total_edges_weight)
 
-    e_edges_fraction = e_edges / total_edges_weight
-    a_edges_fraction = a_edges / total_edges_weight
-    m.append(e_edges_fraction - pow(a_edges_fraction,2))
-  # print "modularity for partition"
-  # print list(neighbours)
-  print sum(m)
-  return sum(m)
+  print "modularity for partition"
+  print list(neighbours)
+  print "Q: %.6f" % Q
+  print "\n"
+  return Q
   
 
 nodes, edges = nodesAndEdges()
@@ -128,7 +124,7 @@ A = numpy.zeros((length,length))
 i = 0
 # For each node, initiate dictionary, neighbours and communities
 for airport in nodes:
-  airports[airport.id] = i
+  airports[airport.code] = i
   neighbours[i] = []
   original_neighbours[i] = []
 
@@ -142,7 +138,7 @@ for route in edges:
 
   # Populate A with connections between airports
   # A[origin_index, dest_index] = 1
-  A[origin_index, dest_index] = A[origin_index, dest_index] + route.n.properties['frequency']
+  A[origin_index, dest_index] = A[origin_index, dest_index] + route.freq
   # Populate neighbours tree
   neighbours[origin_index].append(dest_index)
   original_neighbours[origin_index].append(dest_index)
@@ -150,17 +146,17 @@ for route in edges:
 # Calculate degree matrix
 degrees = numpy.zeros((length,length))
 for code, i in airports.iteritems():
-  degree = sum( map(lambda x: 1 if x > 0.0 else 0, A[i]) )
+  degree = sum( A[i] )
   degrees[i][i] = degree
 
 # Get total weight of all edges
 i = 0
 total_edges_weight = 0.0
-while i < (length-1):
+while i < (length):
   # Add the weight of the self-linking edge of each vertex
-  A[i][i] = sum(A[i]) / float(degrees[i][i])
+  A[i][i] = sum(A[i]) / float( sum( map(lambda x: 1 if x > 0.0 else 0, A[i]) ) )
   # Add this self-linking edge to the degree of the vertex
-  degrees[i][i] = degrees[i][i] + 1
+  degrees[i][i] = degrees[i][i] + A[i][i]
 
   # Sum only the upper triangule of the A matrix and the diagonal
   total_edges_weight = total_edges_weight + sum(A[i][i:length])
@@ -197,8 +193,8 @@ Q = []
 communities_at_step = []
 
 #Get Starting Communities and Modularity
-Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
-communities_at_step.append( list(neighbours.keys()) )
+# Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
+# communities_at_step.append( list(neighbours.keys()) )
 
 # Start merging communities
 while len(neighbours) > 1:
@@ -211,8 +207,8 @@ while len(neighbours) > 1:
         min_index = (i, j)
 
   (communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
-  communities_at_step.append( list(neighbours.keys()) )
-  Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
+  # communities_at_step.append( list(neighbours.keys()) )
+  # Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
 
 # print Q
 exit()

@@ -27,8 +27,7 @@ def nodesAndEdges():
     # WITH a, b, d.year AS year, sum(toInt(d.frequency)) AS yearly_freq
     # CREATE (a)-[m:YEARLY_FLIGHTS { year : year, frequency : yearly_freq }]->(b)
     # """
-  
-    year = "2015"
+
     # Get all routes for that year (edges)
     # Ignoring the direction retrieves a route twice TODO: why is this correct?? (*) random_walks.py line 78
     query = """
