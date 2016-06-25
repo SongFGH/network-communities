@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, is_valid_linkage
 import numpy
 from graph_db import nodesAndEdges
+import pdb
 
 
 def distance(vector1, vector2):
@@ -80,25 +81,52 @@ def mergeCommunities(k, j, communities, neighbours, delta_matrix, Z):
   return (communities, neighbours, delta_matrix, Z)
 
 
+def modularity(A, communities, neighbours, original_neighbours, total_edges_weight):
+  m = []
+  # The 'neighbours' dictionary keeps track of the current communities and their neighbours
+  # while the 'communities' array keeps every community even after merging
+  for community_id, neighbours_list in neighbours.iteritems(): 
+    e_edges = 0.0 # weight of internal edges of the community
+    a_edges = 0.0 # any edge in the community
+    c = communities[community_id]
+    for v in c: # for every vertex in the community
+      for n in original_neighbours[v]: 
+        if n in c: # get the weight of the edges between it and its neighbours 
+          e_edges = e_edges + A[v][n]
+        a_edges = a_edges + A[v][n]
+    mod = float(e_edges) - ( float(a_edges*a_edges) / float(2*total_edges_weight) )
+    m.append( mod )
+
+  Q = sum(m) / float(2 * total_edges_weight)
+
+  print "modularity for partition"
+  print list(neighbours)
+  print "Q: %.6f" % Q
+  print "\n"
+  return Q
+  
+
 nodes, edges = nodesAndEdges()
 length = len(nodes)
 
-
-# A: Initiate as identity matrix
-A = numpy.identity(length)
-
-i = 0
 # Airports dictionary CODE: ID
 airports = {}
 # Airports neighbours dictionary
 neighbours = {}
+# Airports neighbours dictionary
+original_neighbours = {}
 # Cluster communities
 communities = []
 
+# A will keep the track of the weight of the edge between vertices
+A = numpy.zeros((length,length))
+
+i = 0
 # For each node, initiate dictionary, neighbours and communities
 for airport in nodes:
-  airports[airport.id] = i
+  airports[airport.code] = i
   neighbours[i] = []
+  original_neighbours[i] = []
 
   communities.append([i])
   i = i + 1
@@ -109,15 +137,31 @@ for route in edges:
   dest_index = airports[route.dest]
 
   # Populate A with connections between airports
-  A[origin_index, dest_index] = 1 # TO-DO: change 1 with edge weight (frequency) ?
+  # A[origin_index, dest_index] = 1
+  A[origin_index, dest_index] = A[origin_index, dest_index] + route.freq
   # Populate neighbours tree
   neighbours[origin_index].append(dest_index)
+  original_neighbours[origin_index].append(dest_index)
 
 # Calculate degree matrix
-degrees = numpy.zeros([length, length])
+degrees = numpy.zeros((length,length))
 for code, i in airports.iteritems():
-  degree = numpy.sum(A[i])
+  degree = sum( A[i] )
   degrees[i][i] = degree
+
+# Get total weight of all edges
+i = 0
+total_edges_weight = 0.0
+while i < (length):
+  # Add the weight of the self-linking edge of each vertex
+  A[i][i] = sum(A[i]) / float( sum( map(lambda x: 1 if x > 0.0 else 0, A[i]) ) )
+  # Add this self-linking edge to the degree of the vertex
+  degrees[i][i] = degrees[i][i] + A[i][i]
+
+  # Sum only the upper triangule of the A matrix and the diagonal
+  total_edges_weight = total_edges_weight + sum(A[i][i:length])
+  i = i + 1
+
 #numpy.savetxt("degrees.csv", degrees, fmt="%i", delimiter=",")
 
 # Calculate P 
@@ -125,7 +169,7 @@ P = numpy.dot( numpy.linalg.matrix_power(degrees, -1) , A)
 
 #numpy.savetxt("P.csv", P, fmt="%f", delimiter=",")
 
-t = 3
+t = 5
 Pt = P * t
 # numpy.savetxt("Pt.csv", Pt, fmt="%f", delimiter=",")
 
@@ -143,6 +187,15 @@ for i, neighbours_list in neighbours.iteritems():
 # List to keep track of the linkage matrix used for building the dendogram
 Z = []
 
+# Q will keep the modularity value after each partition is made
+Q = []
+# community_at_step will keep the structure of the communities through every merging step
+communities_at_step = []
+
+#Get Starting Communities and Modularity
+# Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
+# communities_at_step.append( list(neighbours.keys()) )
+
 # Start merging communities
 while len(neighbours) > 1:
   min_index = (None, None)
@@ -154,7 +207,11 @@ while len(neighbours) > 1:
         min_index = (i, j)
 
   (communities, neighbours, delta_matrix, Z) = mergeCommunities(min_index[0], min_index[1], communities, neighbours, delta_matrix, Z)
+  # communities_at_step.append( list(neighbours.keys()) )
+  # Q.append(modularity(A, communities, neighbours, original_neighbours, total_edges_weight))
 
+# print Q
+exit()
 # Setup Dendogram
 # plt.figure(figsize=(25, 100))
 plt.title('Random Walks Dendrogram')
