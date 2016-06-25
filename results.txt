@@ -1,0 +1,7 @@
+inverted frequency & normal adj matrix = 0.05~   7 communities
+
+inverted frequency & weighted adj matrix = 0.06~   6 communities
+normal frequency & weighted adj matrix = 0.08~   11 communities
+
+normal frequency & normal adj matrix = 0.06~  14 communities
+

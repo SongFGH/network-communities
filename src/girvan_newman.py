@@ -1,70 +1,110 @@
 import networkx
+import sys
 from graph_db import nodesAndEdges, get_max_frequency
 import time
+import pdb
+import matplotlib.pyplot as plt
+from sets import Set
 
-
-# def update_deg(A, nodes):
-#     deg_dict = {}
-#     n = len(nodes)  #len(A) ---> some ppl get issues when trying len() on sparse matrixes!
-#     B = A.sum(axis = 1)
-#     for i in range(n):
-#         deg_dict[nodes[i]] = B[i, 0]
-#     return deg_dict
-
-
-# def get_modularity(G, deg_, m_):
-#     New_A = networkx.adj_matrix(G)
-#     New_deg = update_deg(New_A, G.nodes())
-#
-#     #Let's compute the Q
-#     comps = networkx.connected_components(G)
-#     print 'No of communities in decomposed G: %d' % networkx.number_connected_components(G)
-#     Mod = 0    #Modularity of a given partitionning
-#     for c in comps:
-#         EWC = 0    #no of edges within a community
-#         RE = 0    #no of random edges
-#         for u in c:
-#             EWC += New_deg[u]
-#             RE += deg_[u]        #count the probability of a random edge
-#         Mod += ( float(EWC) - float(RE*RE)/float(2*m_) )
-#     Mod = Mod/float(2*m_)
-#     print "Modularity: %f" % Mod
-#     return Mod
-
-
-def girvan_newman_step(graph):
-
-    # Get number of connected components
-    init_component_number = networkx.number_connected_components(graph)
-    component_number = init_component_number
-
-    while component_number <= init_component_number:
-
-        # Get shortest-path betweenness
-        betweenness = networkx.edge_betweenness_centrality(graph, weight='frequency')
-
-        # Get maximum value of betweenness
-        max_value = max(betweenness.values())
-
-        # Remove all edges with max value
-        for k, v in betweenness.items():
-            if float(v) == max_value:
-                print "----- Remove edge (%s, %s)" % (k[0], k[1])
-                graph.remove_edge(k[0], k[1])
-
-        component_number = networkx.number_connected_components(graph)
-
-    return networkx.connected_components(G)
+airports = {}
 
 
 def get_communities(components):
-    return [list(c) for c in components]
+        return [list(c) for c in components]
 
 
-def main():
+# Keep removing edges from Graph until one of the connected components of Graph splits into two
+# compute the edge betweenness
+def girvan_newman_step(G):
+
+    init_component_number = networkx.number_connected_components(G)
+    component_number = init_component_number
+
+    while component_number <= init_component_number:
+        bw = networkx.edge_betweenness_centrality(G, weight='frequency')    #edge betweenness for G
+
+        #find the edge with max centrality
+        max_ = max(bw.values())
+
+        #find the edge with the highest centrality and remove all of them if there is more than one!
+        for k, v in bw.iteritems():
+            if float(v) == max_:
+                G.remove_edge(k[0],k[1])    #remove the central edge
+
+        component_number = networkx.number_connected_components(G)    #recalculate the no of components
+
+
+# Compute the modularity of current split
+def get_modularity(G, deg_, m_):
+
+    new_A = networkx.adj_matrix(G, weight="frequency")
+
+    new_deg = update_deg(new_A, G.nodes())
+
+    # Let's compute the Q
+    components = networkx.connected_components(G)    #list of components
+    print 'No of communities in decomposed G: %d' % networkx.number_connected_components(G)
+
+    Mod = 0  # Modularity of a given partitionning
+    for c in components:
+        EWC = 0    # Number of edges within a community
+        RE = 0    # Number of random edges
+        for u in c:
+            EWC += new_deg[u]
+            RE += deg_[u]        # Count the probability of a random edge
+        Mod += (float(EWC) - float(RE * RE) / float(2 * m_))
+
+    Mod = Mod / float(2 * m_)
+
+    return Mod
+
+
+def update_deg(A, nodes):
+    deg_dict = {}
+
+    n = len(nodes)  #len(A) ---> some ppl get issues when trying len() on sparse matrixes!
+    B = A.sum(axis=1)
+    for i in range(n):
+        deg_dict[nodes[i]] = B[i, 0]
+
+    return deg_dict
+
+
+# Run GirvanNewman algorithm and find the best community split by maximizing modularity measure
+def run_girvan_newman(G, orig_deg, m_):
+
+    # Find the best split of the graph
+    best_modularity = -110.0
+    modularity = 0.0
+    best_communities = []
+
+    while True:
+        girvan_newman_step(G)
+        modularity = get_modularity(G, orig_deg, m_)
+        print "Modularity of decomposed G: %f" % modularity
+
+        if modularity > best_modularity:
+            best_modularity = modularity
+            best_components = networkx.connected_components(G)
+            best_communities = get_communities(best_components)
+
+            print "Components:", best_communities
+
+        if G.number_of_edges() == 0:
+            break
+
+    if best_modularity > 0.0:
+        print "Max modularity (Q): %f" % best_modularity
+        # print "Graph communities:", best_communities
+    else:
+        print "Max modularity (Q): %f" % best_modularity
+
+    return best_communities
+
+def main(argv):
 
     # Get graph
-    first_start_time = time.time()
+    start_time = time.time()
     print "-- Get graph"
     nodes, edges = nodesAndEdges()
 
@@ -72,58 +112,52 @@ def main():
     max_freq = get_max_frequency() + 1
 
     # Create graph
-    graph = networkx.Graph()
+    G = networkx.Graph()
+    G_original = networkx.Graph()
+
     for route in edges:
-        graph.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(max_freq - route.freq))
+        # Add edge to graph
+        G.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(max_freq - route.freq))
+        G_original.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(route.freq))
 
-    communities_steps = []
+        # Add to airports dict
+        airports[route.origin_id] = route.origin
+        airports[route.dest_id] = route.dest
 
-    print("--- %s seconds" % "{0:.2f}".format(time.time() - first_start_time))
+    n = G.number_of_nodes()    #|V|
+    A = networkx.adj_matrix(G, weight="frequency")    #adjacenct matrix
 
-    print "-- Running Girvan-Newman"
-    start_time = time.time()
+    m_ = 0.0   # Weighted version for number of edges
+    for i in range(0, n):
+        for j in range(0, n):
+            m_ += A[i,j]
+    m_ = m_/2.0
 
-    # n = graph.number_of_nodes()
-    # A = networkx.adj_matrix(graph)
-    #
-    # m = 0.0  # the weighted version for number of edges
-    # for i in range(0, n):
-    #     for j in range(0, n):
-    #         m += A[i, j]
-    # m /= 2.0
-    #
-    # best_q = 0.0
-    # orig_deg = update_deg(A, graph.nodes())
+    # Calculate the weighted degree for each node
+    orig_deg = update_deg(A, G.nodes())
 
-    # Run Girvan Newman algorithm
-    while True:
+    # Run Newman alg
+    best_communities = run_girvan_newman(G, orig_deg, m_)
 
-        components = girvan_newman_step(graph)
-        communities_steps.append(get_communities(components))
-        print "--- Split into %s connected components" % len(communities_steps[-1])
+    # Draw best partition
+    pos = networkx.spring_layout(G_original)
+    import random
 
-        # Q = get_modularity(G, orig_deg, m)
+    # nodes
+    for c in best_communities:
 
-        # print "Modularity of decomposed G: %f" % Q
+        color = "#%06x" % random.randint(0, 0xFFFFFF)
 
-        # if Q > best_q:
-        #     BestQ = Q
-        #     Bestcomps = networkx.connected_components(G)  # Best Split
-        #     print "Components:", Bestcomps
+        networkx.draw_networkx_nodes(G_original, pos,
+                                   nodelist=c,
+                                   node_color=color,
+                                   node_size=300,
+                                   alpha=0.8)
 
-        # Break when all edges are removed
-        if graph.number_of_edges() == 0:
-            break
-
-    # if best_q > 0.0:
-    #     print "Max modularity (Q): %f" % best_q
-    #     print "Graph communities:", Bestcomps
-    # else:
-    #     print "Max modularity (Q): %f" % best_q
+    networkx.draw_networkx_edges(G_original, pos, width=1.0, alpha=0.5)
+    plt.show()
 
     print("--- %s seconds" % "{0:.2f}".format(time.time() - start_time))
 
-    print communities_steps
-
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))
