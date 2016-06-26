@@ -1,5 +1,5 @@
 function initMap() {
-    console.log("ssss");
+
     map = new google.maps.Map(document.getElementById('map'), {
         zoom: 4,
         center: {lat: 38.563265, lng: -95.186107},
@@ -8,7 +8,7 @@ function initMap() {
         styles: [{"featureType":"administrative.locality","elementType":"geometry","stylers":[{"visibility":"simplified"}]},{"featureType":"administrative.locality","elementType":"labels","stylers":[{"visibility":"simplified"}]}]
     });
 
-    var pinColors = ["382DD4", "FE7569"];
+    var pinColors = ["382DD4", "FE7569", "30EF89", "F8FF15", "FF9A15", "FF33FF", "15F0FF", "1583FF", "999999", "CC6666", "996BDE", "000000", "0D8A47"];
     var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
         new google.maps.Size(40, 37),
         new google.maps.Point(0, 0),
@@ -20,20 +20,22 @@ function initMap() {
 
     for (var i=0; i < airports.length; i++) {
 
-        var pinImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + pinColors[i],
-            new google.maps.Size(21, 34),
-            new google.maps.Point(0,0),
-            new google.maps.Point(10, 34));
+        (function(){
+            var pinImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + pinColors[i],
+                new google.maps.Size(21, 34),
+                new google.maps.Point(0,0),
+                new google.maps.Point(10, 34));
 
-        geocoder.geocode({'address': airports[i]['code']}, function (results, status) {
-            CODE = results[0].geometry.location;
-            bounds.extend(CODE);
-            var marker = new google.maps.Marker({
-                map: map,
-                position: results[0].geometry.location,
-                icon: pinImage,
-                shadow: pinShadow
-            });
-        });
+            for (var k=0; k < airports[i].length; k++) {
+
+                var marker = new google.maps.Marker({
+                    map: map,
+                    position: {lat: Number(airports[i][k]['lat']), lng: Number(airports[i][k]['lon'])},
+                    icon: pinImage,
+                    shadow: pinShadow,
+                    title: String(airports[i][k]['code'])
+                });
+            }
+        })();
     }
-    }
+}

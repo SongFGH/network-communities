@@ -2,11 +2,14 @@ import networkx
 import sys
 from graph_db import nodesAndEdges, get_max_frequency
 import time
-import pdb
 import matplotlib.pyplot as plt
-from sets import Set
+import os
 
 airports = {}
+
+
+def root_dir():
+    return os.path.abspath(os.path.dirname(__file__))
 
 
 def get_communities(components):
@@ -117,7 +120,7 @@ def main(argv):
 
     for route in edges:
         # Add edge to graph
-        G.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(max_freq - route.freq))
+        G.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(route.freq))
         G_original.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(route.freq))
 
         # Add to airports dict
@@ -141,10 +144,13 @@ def main(argv):
 
     # Draw best partition
     pos = networkx.spring_layout(G_original)
+    f = open('results/girvan_newman.txt', 'w')
+
     import random
 
     # nodes
     for c in best_communities:
+        f.write(','.join([str(airports[a]) for a in c]) + "\n")
 
         color = "#%06x" % random.randint(0, 0xFFFFFF)
 
@@ -155,7 +161,9 @@ def main(argv):
                                    alpha=0.8)
 
     networkx.draw_networkx_edges(G_original, pos, width=1.0, alpha=0.5)
-    plt.show()
+
+    plt.savefig('plot/girvan_newman.png')
+    f.close()
 
     print("--- %s seconds" % "{0:.2f}".format(time.time() - start_time))
 
