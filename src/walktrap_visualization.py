@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+import sys
 import matplotlib.pyplot as plt
 from graph_db import nodesAndEdges
 import numpy
@@ -8,7 +9,16 @@ import subprocess
 import random
 import pdb
 
-nodes, edges = nodesAndEdges()
+if len(sys.argv) > 1:
+  try:
+    year = int(sys.argv[1])
+  except ValueError:
+      print "First argument must be a year between 1987 and 2015"
+      exit()
+else:
+  year = 2015
+
+nodes, edges = nodesAndEdges(year)
 length = len(nodes)
 
 # Airports dictionary CODE: ID
@@ -18,7 +28,7 @@ airports = {}
 A = numpy.zeros((length,length))
 
 i = 0
-# Initiate dictionary for each airport
+# Initiate dictionary for each airport and assign them ids
 for airport in nodes:
   airports[airport.code] = i
   i = i + 1
@@ -64,17 +74,27 @@ communities = [ nodes.split(" ") for nodes in communities ]
 # to int
 communities = map( lambda x: map( lambda y: int(y), x), communities)
 
+# Create the file that will be the input for the walktrap algorithm
+f = open('results/walktrap_%d.txt' % year,'w')
+
 # pos = nx.spring_layout(G) # positions for all nodes
 pos = nx.shell_layout(G, communities)
 
 # nodes
 for c in communities:
+  # Draw nodes in the communities
   color = "#%06x" % random.randint(0, 0xFFFFFF)
   nx.draw_networkx_nodes(G,pos,
                         nodelist= c,
                         node_color=color,
-                        node_size=700)
+                        node_size=100)
 
+  # Write the community's airports in a file to visualize with google maps
+  f.write(','.join([airports.keys()[airports.values().index(a)] for a in c]) + "\n")
+
+f.close()
+
+# Draw the network edges
 nx.draw_networkx_edges(G,pos,
                        edgelist=G.edges(),
                        width=1,
@@ -82,7 +102,7 @@ nx.draw_networkx_edges(G,pos,
                        edge_color='black')
 
 plt.axis('off')
-plt.show() # display
+plt.show()
 
 
 

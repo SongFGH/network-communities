@@ -16,10 +16,10 @@ header = {
 }
 
 graph = Graph()
-year = "2015"
+# year = "2015"
 
 
-def nodesAndEdges():
+def nodesAndEdges(year=2015):
     graph = Graph()
     # Aggregate by year query
     # query= """
