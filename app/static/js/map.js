@@ -1,3 +1,8 @@
+
+function getHexColor() {
+    return Math.floor(Math.random()*16777215).toString(16);
+}
+
 function initMap() {
 
     map = new google.maps.Map(document.getElementById('map'), {
@@ -8,7 +13,13 @@ function initMap() {
         styles: [{"featureType":"administrative.locality","elementType":"geometry","stylers":[{"visibility":"simplified"}]},{"featureType":"administrative.locality","elementType":"labels","stylers":[{"visibility":"simplified"}]}]
     });
 
-    var pinColors = ["382DD4", "FE7569", "30EF89", "F8FF15", "FF9A15", "FF33FF", "15F0FF", "1583FF", "999999", "CC6666", "996BDE", "000000", "0D8A47"];
+    var pinColors = [];
+    for (var k=0; k < airports.length; k++) {
+        var color = getHexColor();
+        pinColors.push(color);
+    }
+    // var pinColors = ["382DD4", "FE7569", "30EF89", "F8FF15", "FF9A15", "FF33FF", "15F0FF", "1583FF", "999999", "CC6666", "996BDE", "000000", "0D8A47"];
+
     var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
         new google.maps.Size(40, 37),
         new google.maps.Point(0, 0),
