@@ -74,13 +74,19 @@ communities = [ nodes.split(" ") for nodes in communities ]
 # to int
 communities = map( lambda x: map( lambda y: int(y), x), communities)
 
-# Create the file that will be the input for the walktrap algorithm
+# Create input for map visualization
 f = open('results/walktrap_%d.txt' % year,'w')
+
+# Create file to output communities in a csv file
+f2 = open('results/exploited/walktrap_%d.csv' % year, 'w')
+f2.write(','.join(['community', 'airport', 'city', 'state', 'degree', 'weighted_degree',
+                  'internal_degree', 'internal_weighted_degree']) + "\n")
 
 # pos = nx.spring_layout(G) # positions for all nodes
 pos = nx.shell_layout(G, communities)
 
 # nodes
+community_id = 0;
 for c in communities:
   # Draw nodes in the communities
   color = "#%06x" % random.randint(0, 0xFFFFFF)
@@ -89,10 +95,29 @@ for c in communities:
                         node_color=color,
                         node_size=100)
 
+  airport_codes_list = []
+  for a in c:
+    a_code = airports.keys()[airports.values().index(a)]
+    airport_codes_list.append(a_code)
+
+    # Normal degree calculated on original graph
+    degree = G.degree(a)
+    # Weighted degree calculated on original graph
+    weighted_degree = G.degree(a, weight='frequency')
+
+    f2.write(','.join([
+      str(community_id), str(a_code), "", "",
+      str(degree), str(int(weighted_degree)), "", ""
+    ]) + "\n")
+
   # Write the community's airports in a file to visualize with google maps
-  f.write(','.join([airports.keys()[airports.values().index(a)] for a in c]) + "\n")
+  f.write(','.join(airport_codes_list) + "\n")
+
+  community_id = community_id + 1
+
 
 f.close()
+f2.close()
 
 # Draw the network edges
 nx.draw_networkx_edges(G,pos,

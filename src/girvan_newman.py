@@ -163,7 +163,7 @@ def main(argv):
     # Draw best partition
     pos = networkx.spring_layout(G_original)
     f = open('results/%s.txt' % filename, 'w')
-    f2 = open('results/exploited/%s.txt' % filename, 'w')
+    f2 = open('results/exploited/%s.csv' % filename, 'w')
     f2.write(','.join(['community', 'airport', 'city', 'state', 'degree', 'weighted_degree',
                        'internal_degree', 'internal_weighted_degree']) + "\n")
 
