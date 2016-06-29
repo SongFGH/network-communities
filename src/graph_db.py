@@ -58,12 +58,11 @@ def get_max_frequency():
     return int(result[0].max_freq)
 
 
-def get_nodes():
-
-    # Get all active airports for that year (AIRPORTS) | TODO: is this the best way?
+def get_edges(year):
     query = """
-        MATCH (a:Airport)-[n:YEARLY_FLIGHTS{ year: '%s'}]-()
-        RETURN a.code as code, ID(a) as id, count(*)
+        MATCH (a:Airport)-[n:YEARLY_FLIGHTS{ year: '%s'}]-(b:Airport)
+        RETURN a.code AS origin, ID(a) as origin_id, a.state as origin_state, a.city as origin_city,
+        n.frequency as freq, b.code AS dest, ID(b) as dest_id, b.state as dest_state, b.city as dest_city
         """ % year
     return graph.cypher.execute(query)
 

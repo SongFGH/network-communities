@@ -1,11 +1,27 @@
 import networkx
 import sys
-from graph_db import nodesAndEdges, get_max_frequency
+from graph_db import get_edges, get_max_frequency
 import time
 import matplotlib.pyplot as plt
 import os
 
 airports = {}
+
+try:
+    year = sys.argv[1]
+    frequency = sys.argv[2]
+
+    if frequency == 'regular':
+        inverted = False
+    elif frequency == 'inverted':
+        inverted = True
+    else:
+        raise Exception
+except:
+    exit('usage: python girvan_newman.py <year> <regular/inverted>')
+
+filename = 'girvan_newman_inverted' if inverted else 'girvan_newman'
+filename = "%s_%s" % (filename, year)
 
 
 def root_dir():
@@ -35,7 +51,6 @@ def girvan_newman_step(G):
                 G.remove_edge(k[0],k[1])    #remove the central edge
 
         component_number = networkx.number_connected_components(G)    #recalculate the no of components
-
 
 # Compute the modularity of current split
 def get_modularity(G, deg_, m_):
@@ -80,6 +95,7 @@ def run_girvan_newman(G, orig_deg, m_):
     best_modularity = -110.0
     modularity = 0.0
     best_communities = []
+    best_graph = G.copy()
 
     while True:
         girvan_newman_step(G)
@@ -90,6 +106,7 @@ def run_girvan_newman(G, orig_deg, m_):
             best_modularity = modularity
             best_components = networkx.connected_components(G)
             best_communities = get_communities(best_components)
+            best_graph = G.copy()
 
             print "Components:", best_communities
 
@@ -102,14 +119,14 @@ def run_girvan_newman(G, orig_deg, m_):
     else:
         print "Max modularity (Q): %f" % best_modularity
 
-    return best_communities
+    return best_communities, best_graph
 
 def main(argv):
 
     # Get graph
     start_time = time.time()
     print "-- Get graph"
-    nodes, edges = nodesAndEdges()
+    edges = get_edges(year)
 
     # Get max frequency to normalize edges weight
     max_freq = get_max_frequency() + 1
@@ -120,12 +137,13 @@ def main(argv):
 
     for route in edges:
         # Add edge to graph
-        G.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(route.freq))
+        frequency = float(max_freq - route.freq) if inverted else float(route.freq)
+        G.add_edge(int(route.origin_id), int(route.dest_id), frequency=frequency)
         G_original.add_edge(int(route.origin_id), int(route.dest_id), frequency=float(route.freq))
 
         # Add to airports dict
-        airports[route.origin_id] = route.origin
-        airports[route.dest_id] = route.dest
+        airports[route.origin_id] = {'code': route.origin, 'city': route.origin_city, 'state': route.origin_state}
+        airports[route.dest_id] = {'code': route.dest, 'city': route.dest_city, 'state': route.dest_state}
 
     n = G.number_of_nodes()    #|V|
     A = networkx.adj_matrix(G, weight="frequency")    #adjacenct matrix
@@ -140,17 +158,42 @@ def main(argv):
     orig_deg = update_deg(A, G.nodes())
 
     # Run Newman alg
-    best_communities = run_girvan_newman(G, orig_deg, m_)
+    best_communities, best_graph = run_girvan_newman(G, orig_deg, m_)
 
     # Draw best partition
     pos = networkx.spring_layout(G_original)
-    f = open('results/girvan_newman.txt', 'w')
+    f = open('results/%s.txt' % filename, 'w')
+    f2 = open('results/exploited/%s.txt' % filename, 'w')
+    f2.write(','.join(['community', 'airport', 'city', 'state', 'degree', 'weighted_degree',
+                       'internal_degree', 'internal_weighted_degree']) + "\n")
 
     import random
 
-    # nodes
+    counter = 0
     for c in best_communities:
-        f.write(','.join([str(airports[a]) for a in c]) + "\n")
+        f.write(','.join([str(airports[a]['code']) for a in c]) + "\n")
+
+        for a in c:
+            # Normal degree calculated on original graph
+            degree = G_original.degree(a)
+
+            # Weighted degree calculated on original graph
+            weighted_degree = G_original.degree(a, weight='frequency')
+
+            # Internal normal degree calculated on graph after splitting in best communities
+            internal_degree = best_graph.degree(a)
+
+            # Internal weighted degree calculated on graph after splitting in best communities
+            # If inverted version: get original frequency by subtracting max frequency
+            internal_weighted_degree = (max_freq * internal_degree) - best_graph.degree(a, weight='frequency') \
+                if inverted else best_graph.degree(a, weight='frequency')
+
+            f2.write(','.join([
+                str(counter), str(airports[a]['code']), str(airports[a]['city']), str(airports[a]['state']),
+                str(degree), str(int(weighted_degree)), str(internal_degree), str(int(internal_weighted_degree))
+            ]) + "\n")
+
+        counter += 1
 
         color = "#%06x" % random.randint(0, 0xFFFFFF)
 
@@ -162,7 +205,7 @@ def main(argv):
 
     networkx.draw_networkx_edges(G_original, pos, width=1.0, alpha=0.5)
 
-    plt.savefig('plot/girvan_newman.png')
+    plt.savefig('plot/%s.png' % filename)
     f.close()
 
     print("--- %s seconds" % "{0:.2f}".format(time.time() - start_time))
