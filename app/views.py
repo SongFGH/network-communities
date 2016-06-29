@@ -1,5 +1,6 @@
 from flask import render_template, abort
 from app import app
+import pdb
 import csv
 import os
 
@@ -9,15 +10,12 @@ def root_dir():
 
 
 def get_communities(file_name):
-
     communities = []
-
-
     try:
         with open(os.path.join('results', '%s.txt' % file_name)) as f:
             lines = f.readlines()
             for community in lines:
-                communities.append(community.split(','))
+                communities.append([a.replace('\n','') for a in community.split(',')])
     except IOError:
         return None
 
@@ -48,5 +46,4 @@ def map(filename):
             except:
                 not_found.append(a)
         communities_info.append(air)
-
     return render_template('map.html', title='Map', airports=communities_info)
