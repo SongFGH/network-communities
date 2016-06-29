@@ -23,6 +23,8 @@ length = len(nodes)
 
 # Airports dictionary CODE: ID
 airports = {}
+# Details of airports CODE: {'city':'', 'state':''}
+airports_details = {}
 
 # A saves the weight of the edges
 A = numpy.zeros((length,length))
@@ -31,6 +33,7 @@ i = 0
 # Initiate dictionary for each airport and assign them ids
 for airport in nodes:
   airports[airport.code] = i
+  airports_details[airport.code] = {'city': airport.city, 'state': airport.state}
   i = i + 1
 
 # Create graph
@@ -106,7 +109,7 @@ for c in communities:
     weighted_degree = G.degree(a, weight='frequency')
 
     f2.write(','.join([
-      str(community_id), str(a_code), "", "",
+      str(community_id), str(a_code), airports_details[a_code]['city'], airports_details[a_code]['state'],
       str(degree), str(int(weighted_degree)), "", ""
     ]) + "\n")
 

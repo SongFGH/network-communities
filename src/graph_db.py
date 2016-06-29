@@ -39,7 +39,7 @@ def nodesAndEdges(year=2015):
     # Get all active airports for that year (AIRPORTS) | TODO: is this the best way?
     query = """
         MATCH (a:Airport)-[n:YEARLY_FLIGHTS{ year: '%s'}]-()
-        RETURN a.code as code, ID(a) as id, count(*)
+        RETURN a.code as code, ID(a) as id, a.city as city, a.state as state, count(*)
     """ % year
     nodes = graph.cypher.execute(query)
 
