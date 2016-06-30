@@ -32,6 +32,7 @@ def nodesAndEdges(year=2015):
     # Ignoring the direction retrieves a route twice TODO: why is this correct?? (*) random_walks.py line 78
     query = """
     MATCH (a:Airport)-[n:YEARLY_FLIGHTS{ year: '%s'}]-(b:Airport)
+    WHERE n.frequency > 52
     RETURN a.code AS origin, ID(a) as origin_id, n.frequency as freq, b.code AS dest, ID(b) as dest_id
     """ % year
     edges = graph.cypher.execute(query)
@@ -39,6 +40,7 @@ def nodesAndEdges(year=2015):
     # Get all active airports for that year (AIRPORTS) | TODO: is this the best way?
     query = """
         MATCH (a:Airport)-[n:YEARLY_FLIGHTS{ year: '%s'}]-()
+        WHERE n.frequency > 52
         RETURN a.code as code, ID(a) as id, a.city as city, a.state as state, count(*)
     """ % year
     nodes = graph.cypher.execute(query)
