@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import sys
+import os
 import matplotlib.pyplot as plt
 from graph_db import nodesAndEdges
 import numpy
@@ -13,8 +14,17 @@ if len(sys.argv) > 1:
   try:
     year = int(sys.argv[1])
   except ValueError:
-      print "First argument must be a year between 1987 and 2015"
-      exit()
+    print "First argument must be a year between 1987 and 2015"
+    exit()
+
+  if len(sys.argv) > 2:
+    try:
+      plot_graph = str(sys.argv[2])
+    except ValueError:
+      plot_graph = "no_plot"
+  else:
+    plot_graph = "no_plot"
+    
 else:
   year = 2015
 
@@ -61,8 +71,11 @@ while i < (length):
 
 f.close()
 
+
+walktrap_path = os.environ['WALKTRAP_PATH']
+
 # run walktrap
-pipe = subprocess.Popen(["../walktrap02/walktrap", "flights.net", "-d1", "-s", "-b"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+pipe = subprocess.Popen(["%s/walktrap" % walktrap_path, "flights.net", "-d1", "-s", "-b"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 stdout_data, stderr_data = pipe.communicate()
 
 output_lines = stdout_data.splitlines()
@@ -129,8 +142,9 @@ nx.draw_networkx_edges(G,pos,
                        alpha=0.5,
                        edge_color='black')
 
-plt.axis('off')
-plt.show()
+if (plot_graph == "plot"):
+  plt.axis('off')
+  plt.show()
 
 
 
