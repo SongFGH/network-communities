@@ -43,7 +43,10 @@ def girvan_newman_step(G):
         bw = networkx.edge_betweenness_centrality(G, weight='frequency')    #edge betweenness for G
 
         #find the edge with max centrality
-        max_ = max(bw.values())
+        try:
+            max_ = max(bw.values())
+        except ValueError:
+            break
 
         #find the edge with the highest centrality and remove all of them if there is more than one!
         for k, v in bw.iteritems():
