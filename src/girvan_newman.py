@@ -20,8 +20,8 @@ try:
 except:
     exit('usage: python girvan_newman.py <year> <regular/inverted>')
 
-filename = 'girvan_newman_inverted' if inverted else 'girvan_newman'
-filename = "%s_%s" % (filename, year)
+method = 'girvan_newman_inverted' if inverted else 'girvan_newman'
+filename = "%s_%s" % (method, year)
 
 
 def root_dir():
@@ -119,7 +119,7 @@ def run_girvan_newman(G, orig_deg, m_):
     else:
         print "Max modularity (Q): %f" % best_modularity
 
-    return best_communities, best_graph
+    return best_communities, best_graph, best_modularity
 
 def main(argv):
 
@@ -158,7 +158,7 @@ def main(argv):
     orig_deg = update_deg(A, G.nodes())
 
     # Run Newman alg
-    best_communities, best_graph = run_girvan_newman(G, orig_deg, m_)
+    best_communities, best_graph, best_modularity = run_girvan_newman(G, orig_deg, m_)
 
     # Draw best partition
     pos = networkx.spring_layout(G_original)
@@ -166,6 +166,10 @@ def main(argv):
     f2 = open('results/exploited/%s.csv' % filename, 'w')
     f2.write(','.join(['community', 'airport', 'city', 'state', 'degree', 'weighted_degree',
                        'internal_degree', 'internal_weighted_degree']) + "\n")
+
+    f3 = open('results.txt', 'a')
+    f3.write("\n" + ','.join([method, year, str(best_modularity), str(len(best_communities))]))
+    f3.close()
 
     import random
 
@@ -207,6 +211,7 @@ def main(argv):
 
     plt.savefig('plot/%s.png' % filename)
     f.close()
+    f2.close()
 
     print("--- %s seconds" % "{0:.2f}".format(time.time() - start_time))
 
