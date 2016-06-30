@@ -19,7 +19,7 @@ def get_communities(file_name):
     except IOError:
         return None
 
-    return communities
+    return sorted(communities, key=len, reverse=True)
 
 
 @app.route("/map/<string:filename>")
