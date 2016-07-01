@@ -98,6 +98,10 @@ f2 = open('results/exploited/walktrap_%d.csv' % year, 'w')
 f2.write(','.join(['community', 'airport', 'city', 'state', 'degree', 'weighted_degree',
                   'internal_degree', 'internal_weighted_degree']) + "\n")
 
+f3 = open('results.txt', 'a')
+f3.write("\n" + ','.join(["walktrap", str(year), str(Q), str(len(communities))]))
+f3.close()
+
 # pos = nx.spring_layout(G) # positions for all nodes
 pos = nx.shell_layout(G, communities)
 
@@ -122,7 +126,7 @@ for c in communities:
     weighted_degree = G.degree(a, weight='frequency')
 
     f2.write(','.join([
-      str(community_id), str(a_code), airports_details[a_code]['city'], airports_details[a_code]['state'],
+      str(community_id), str(a_code), airports_details[a_code]['city'], airports_details[a_code]['state'] or "",
       str(degree), str(int(weighted_degree)), "", ""
     ]) + "\n")
 
