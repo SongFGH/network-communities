@@ -19,8 +19,10 @@ We decided to compare two opposite approches to the problem of finding communiti
 
 To run the algorithms you need to have a Neo4j database running and with already yearly aggregated data.
 
+	# Have a neo4j instance of the database running on localhost
+
 	# Run random walks
-	python src/random_walks.py
+	python src/walktrap_visualization.py
 	
 	# Run shortest-path betwenness
 	python src/girvan_newman.py
