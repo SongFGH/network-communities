@@ -140,11 +140,11 @@ f.close()
 f2.close()
 
 # Draw the network edges
-nx.draw_networkx_edges(G,pos,
-                       edgelist=G.edges(),
-                       width=1,
-                       alpha=0.5,
-                       edge_color='black')
+# nx.draw_networkx_edges(G,pos,
+#                        edgelist=G.edges(),
+#                        width=1,
+#                        alpha=0.5,
+#                        edge_color='black')
 
 if (plot_graph == "plot"):
   plt.axis('off')
